@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Diffraction Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- KaTeX library for rendering mathematical expressions -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.18/dist/katex.min.css" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.13.18/dist/katex.min.js" crossorigin="anonymous"></script>
+    
+    <!-- Auto-render extension for KaTeX -->
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.13.18/dist/contrib/auto-render.min.js" crossorigin="anonymous" onload="
+        renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false},
+                {left: '\\(', right: '\\)', display: false},
+                {left: '\\[', right: '\\]', display: true}
+            ],
+            throwOnError : false
+        });
+    "></script>
+
+    <style>
+        /* Apply Inter font, common in modern UIs */
+        body {
+            font-family: "Inter", sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Hide main overflow to prevent scrollbars from background animation */
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%); /* Very light gradient background */
+        }
+
+        /* ------------------- Glassmorphism Card ------------------- */
+        .card-container {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 10px;
+            overflow-y: auto; /* Allow scrolling inside container if needed */
+        }
+
+        .card {
+            width: 98%;
+            max-width: 900px;
+            padding: 30px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.4); /* Slightly transparent white */
+            backdrop-filter: blur(15px); /* The Glassmorphism effect */
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        /* Input field styling */
+        .input-group input {
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .input-group input:focus {
+            border-color: #3b82f6; /* Blue 500 */
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            outline: none;
+        }
+
+        /* KaTeX styling fix */
+        .katex {
+            font-size: 1.1em;
+        }
+        
+        /* ------------------- Custom Button Styles (THEME BLUE) ------------------- */
+        .tab-button {
+            padding: 10px 15px;
+            font-weight: 600;
+            border-radius: 12px;
+            transition: all 0.2s;
+            cursor: pointer;
+            text-align: center;
+            border: 1px solid rgba(0, 0, 0, 0.05); /* Subtle separation line */
+        }
+
+        .submit-button {
+            padding: 12px 20px;
+            font-weight: 700;
+            border-radius: 12px;
+            color: white;
+            background-color: #2563eb; /* Blue 600 */
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.5), 0 2px 4px -2px rgba(37, 99, 235, 0.5);
+        }
+        .submit-button:hover {
+            background-color: #1d4ed8; /* Blue 700 */
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3), 0 4px 6px -4px rgba(37, 99, 235, 0.3);
+        }
+
+        /* ------------------- Modal Styling ------------------- */
+        .modal-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6); /* Darker overlay for emphasis */
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            backdrop-filter: blur(5px); /* Add a slight blur to the background */
+        }
+
+        .modal-box {
+            width: 95%; 
+            max-width: 900px; /* Increased max-width for landscape look */
+            max-height: 90vh; /* Restrict height for smaller screens */
+            animation: fadeIn 0.3s ease-out;
+            --modal-color: #2563eb; /* Default modal color now Blue 600 */
+            border: 2px solid rgba(255, 255, 255, 0.4); /* Glassmorphism border */
+            background: rgba(255, 255, 255, 0.85); /* Slightly less transparent */
+            backdrop-filter: blur(20px);
+            overflow-y: auto; /* Allow scrolling inside the modal */
+        }
+        
+        .modal-header-text {
+            color: var(--modal-color);
+            border-bottom: 2px solid var(--modal-color); /* Add a colored underline */
+            padding-bottom: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .modal-close-button {
+            background-color: var(--modal-color);
+        }
+        .modal-close-button:hover {
+            opacity: 0.85;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* ------------------- Animated Background Balls (BLUE, PURPLE, GREEN) ------------------- */
+        .bg-ball {
+            position: absolute;
+            width: 30vw;
+            height: 30vw;
+            border-radius: 50%;
+            filter: blur(150px);
+            opacity: 0.7;
+            z-index: 1;
+        }
+        
+        @keyframes moveBall1 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(20vw, 15vh); }
+        }
+
+        @keyframes moveBall2 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-10vw, -10vh); }
+        }
+
+        @keyframes moveBall3 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(10vw, -20vh); }
+        }
+
+        /* Ball 1 - Top Left (Blue) */
+        #ball1 {
+            background: #3b82f6; /* Blue 500 */
+            top: -10vh;
+            left: -10vw;
+            animation: moveBall1 20s infinite alternate ease-in-out;
+        }
+
+        /* Ball 2 - Bottom Right (Purple) */
+        #ball2 {
+            background: #741dff; /* Purple 600 */
+            bottom: -15vh;
+            right: -15vw;
+            animation: moveBall2 25s infinite alternate ease-in-out;
+            width: 25vw;
+            height: 25vw;
+        }
+
+        /* Ball 3 - Center Right (Green) */
+        #ball3 {
+            background: #2AAA8A; /* Green 600 */
+            top: 40vh;
+            right: -10vw;
+            animation: moveBall3 30s infinite alternate ease-in-out;
+            width: 35vw;
+            height: 35vw;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="ball1" class="bg-ball"></div>
+    <div id="ball2" class="bg-ball"></div>
+    <div id="ball3" class="bg-ball"></div>
+
+    <div class="card-container">
+        <div class="card">
+            <h2 class="text-3xl font-bold text-gray-800 text-center mb-6">Diffraction Physics Solver</h2>
+
+            <div class="flex gap-1 mb-8 p-1 bg-gray-100 rounded-xl">
+                <button
+                    id="btn-p1"
+                    class="tab-button flex-1 bg-blue-600 text-white shadow-lg"
+                    onclick="showProblem(1)"
+                >
+                    Slit Width Comparison
+                </button>
+                <button
+                    id="btn-p2"
+                    class="tab-button flex-1 bg-white text-gray-700 hover:bg-blue-50"
+                    onclick="showProblem(2)"
+                >
+                    Grating Angle Calculation
+                </button>
+            </div>
+
+            <div id="p1" class="space-y-4">
+                <h3 class="text-xl font-semibold text-center text-gray-700 mb-4">
+                    Problem 1: Single-Slit Diffraction $$a \sin\theta = m\lambda$$
+                </h3>
+                <div class="input-group">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Wavelength(nm)</label>
+                    <!-- Text removed: simplified placeholder -->
+                    <input type="number" id="lambda" placeholder="380 - 750 " class="w-full" /> 
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="input-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Slit1 Width</label>
+                        <!-- Text removed: simplified placeholder -->
+                        <input type="number" id="a1" placeholder="1" class="w-full" />
+                    </div>
+
+                    <div class="input-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Slit2 Width</label>
+                        <!-- Text removed: simplified placeholder -->
+                        <input type="number" id="a2" placeholder="2" class="w-full" />
+                    </div>
+
+                    <div class="input-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Slit3 Width</label>
+                        <!-- Text removed: simplified placeholder -->
+                        <input type="number" id="a3" placeholder="3" class="w-full" />
+                    </div>
+                </div>
+                
+                <div class="flex justify-center pt-4">
+                    <button class="submit-button w-full md:w-1/2" onclick="calculate()">
+                        Calculate First Minimum Angle
+                    </button>
+                </div>
+            </div>
+
+            <div id="p2" class="space-y-4" style="display:none;">
+                <h3 class="text-xl font-semibold text-center text-gray-700 mb-4">
+                    Problem 2: Diffraction Grating $$d \sin\theta = m\lambda$$
+                </h3>
+
+                
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="input-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Green Wavelength (nm)</label>
+                        <!-- Text removed: simplified placeholder -->
+                        <input type="number" id="g_lambda" placeholder="530" class="w-full" />
+                    </div>
+                    <div class="input-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Green Order</label>
+                        <!-- Text removed: simplified placeholder -->
+                        <input type="number" id="g_m" placeholder="3" class="w-full" />
+                    </div>
+                    <div class="input-group md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Green Angle</label>
+                        <!-- Text removed: simplified placeholder -->
+                        <input type="number" id="g_theta" placeholder="65" class="w-full" />
+                    </div>
+
+                    <hr class="md:col-span-2 my-2 border-gray-200" />
+
+                    <div class="input-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Red Wavelength (nm)</label>
+                        <!-- Text removed: simplified placeholder -->
+                        <input type="number" id="r_lambda" placeholder="700" class="w-full" />
+                    </div>
+                    <div class="input-group">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Red Order</label>
+                        <!-- Text removed: simplified placeholder -->
+                        <input type="number" id="r_m" placeholder="2" class="w-full" />
+                    </div>
+                </div>
+
+                <div class="flex justify-center pt-4">
+                    <button class="submit-button w-full md:w-1/2" onclick="solveP2()">Solve for Red Angle</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Results and Errors -->
+    <div id="modal" class="modal-bg">
+        <div id="modal-box" class="modal-box bg-white p-6 rounded-xl shadow-2xl">
+            <h2 id="modal-header" class="text-2xl font-bold mb-3 modal-header-text">Calculation Result</h2>
+            <div id="modal-content" class="text-lg text-gray-700 text-left space-y-3"></div>
+            <button
+                id="modal-close-button"
+                class="mt-6 w-full py-3 text-white font-semibold rounded-lg modal-close-button"
+                onclick="closeModal()"
+            >
+                Close
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Corresponding colors for modal styling (must be valid CSS color strings/hex codes)
+        const DEFAULT_MODAL_COLOR = '#2563eb'; // Default to Blue 600
+
+        window.onload = function () {
+            // Initial problem setup
+            showProblem(1);
+        }
+
+        /* ---------------- Tab Switcher (GLOBAL SCOPE) ---------------- */
+        function showProblem(n) {
+            document.getElementById("p1").style.display = n === 1 ? "block" : "none";
+            document.getElementById("p2").style.display = n === 2 ? "block" : "none";
+
+            // Update button styles
+            const btn1 = document.getElementById("btn-p1");
+            const btn2 = document.getElementById("btn-p2");
+
+            if (n === 1) {
+                // Slit Width Comparison is active
+                btn1.className = "tab-button flex-1 bg-blue-600 text-white shadow-lg"; // Blue 600
+                btn2.className = "tab-button flex-1 bg-white text-gray-700 hover:bg-blue-50"; // Blue 50
+            } else {
+                // Grating Angle Calculation is active
+                btn1.className = "tab-button flex-1 bg-white text-gray-700 hover:bg-blue-50"; // Blue 50
+                btn2.className = "tab-button flex-1 bg-blue-600 text-white shadow-lg"; // Blue 600
+            }
+            // Re-render math when switching tabs to ensure KaTeX runs on hidden elements
+            setTimeout(() => {
+                if (window.renderMathInElement) {
+                    // Re-render math in the content areas
+                    renderMathInElement(document.getElementById("p1"));
+                    renderMathInElement(document.getElementById("p2"));
+                }
+            }, 50);
+        }
+
+        /* ---------------- Modal Functions (GLOBAL SCOPE) ---------------- */
+        function showModal(content, modalColor = DEFAULT_MODAL_COLOR) {
+            const modalBox = document.getElementById("modal-box");
+            modalBox.style.setProperty('--modal-color', modalColor);
+            
+            // Set content and render math
+            const modalContent = document.getElementById("modal-content");
+            modalContent.innerHTML = content;
+            
+            // Re-render math inside the modal (using the robust configuration again)
+            if (window.renderMathInElement) {
+                try {
+                    renderMathInElement(modalContent, {
+                        delimiters: [
+                            {left: "$$", right: "$$", display: true},
+                            {left: "$", right: "$", display: false}
+                        ],
+                        throwOnError : false
+                    });
+                } catch (e) {
+                    console.error("KaTeX rendering failed:", e);
+                }
+            }
+
+            document.getElementById("modal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("modal").style.display = "none";
+        }
+        
+        // Helper function to get the color string and modal color
+        function getColorDetails(lambda) {
+            // Wavelength color mapping (380-750 nm visible spectrum)
+            if (lambda >= 380 && lambda < 450) return { name: "<span style='font-weight:bold;'>Violet</span>", modal: '#6a0dad' }; // Violet
+            if (lambda >= 450 && lambda < 485) return { name: "<span style='font-weight:bold;'>Blue</span>", modal: '#1e40af' }; // Blue
+            if (lambda >= 485 && lambda < 500) return { name: "<span style='font-weight:bold;'>Cyan</span>", modal: '#0891b2' }; // Cyan
+            if (lambda >= 500 && lambda < 565) return { name: "<span style='font-weight:bold;'>Green</span>", modal: '#059669' }; // Green
+            if (lambda >= 565 && lambda < 590) return { name: "<span style='font-weight:bold;'>Yellow</span>", modal: '#d97706' }; // Yellow
+            if (lambda >= 590 && lambda < 625) return { name: "<span style='font-weight:bold;'>Orange</span>", modal: '#ea580c' }; // Orange
+            if (lambda >= 625 && lambda <= 750) return { name: "<span style='font-weight:bold;'>Red</span>", modal: '#dc2626' }; // Red
+            return { name: "Out of Range", modal: '#9ca3af' }; // Default gray for error
+        }
+
+
+        /* ---------------- Problem 1 Logic (GLOBAL SCOPE) ---------------- */
+        // Formula used: a * sin(theta) = m * lambda, where m=1 for the first minimum.
+        // We find theta = asin(lambda / a)
+        function calculate() {
+            let lambda = parseFloat(document.getElementById("lambda").value);
+            let a1 = parseFloat(document.getElementById("a1").value);
+            let a2 = parseFloat(document.getElementById("a2").value);
+            let a3 = parseFloat(document.getElementById("a3").value);
+            
+            // Out of Range Wavelength Check
+            if (isNaN(lambda) || lambda < 380 || lambda > 750) {
+                const errorColor = '#D2042D'; // Red Cherry
+                showModal(`
+                    <div class="p-3 rounded-lg text-center mb-4" style="background-color: ${errorColor}15; border: 1px solid ${errorColor}40; color: ${errorColor};">
+                        <p class="font-bold text-lg">Input Error</p>
+                    </div>
+                    <p class='text-center mt-4 text-gray-600 font-bold'> Out of Range. Please enter a valid number (380nm - 750nm)</p>
+                `, errorColor);
+                return;
+            }
+
+            let colorDetails = getColorDetails(lambda);
+            let color = colorDetails.name;
+            let modalColor = colorDetails.modal;
+            let lam_m = lambda * 1e-9; // Convert nm to meters
+
+            function theta(a) {
+                if (isNaN(a) || a <= 0) return NaN;
+                let a_m = a * 1e-6; // Convert µm to meters
+                let ratio = lam_m / a_m; // sin(theta)
+                
+                // Check if sin(theta) > 1, which means no angle is possible (full spread)
+                if (ratio > 1) return NaN; 
+                
+                return Math.asin(ratio) * 180 / Math.PI; // Result in degrees
+            }
+
+            let t1 = theta(a1);
+            let t2 = theta(a2);
+            let t3 = theta(a3);
+
+            const angles = [
+                { name: "a_1", value: a1, theta: t1 },
+                { name: "a_2", value: a2, theta: t2 },
+                { name: "a_3", value: a3, theta: t3 }
+            ];
+
+            const valid = angles.filter(a => !isNaN(a.theta));
+
+            // Set final color for the conclusion box. If valid results exist, use the light color. If only errors, use Red.
+            const finalModalColor = valid.length > 0 ? modalColor : '#dc2626';
+            const errorColor = '#dc2626';
+
+            if (valid.length === 0) {
+                    showModal(`
+                        <div class="p-3 rounded-lg text-center mb-4" style="background-color: ${errorColor}15; border: 1px solid ${errorColor}40; color: ${errorColor};">
+                            <p class="font-bold text-lg">Wavelength: $$\\lambda = ${lambda}\\text{ nm}$$ (${color})</p>
+                        </div>
+                        <p class='text-center mt-4 text-red-600 font-bold'>No valid angle found. All calculated $$\\sin\\theta$$ values were $$\\ge 1$$ or slits were invalid.</p>
+                    `, errorColor);
+                    return;
+            }
+
+            let maxTheta = valid.reduce((max, current) => (current.theta > max ? current.theta : max), -Infinity);
+            let maxSlit = valid.find(a => a.theta === maxTheta).name;
+
+            // Format results
+            const formatTheta = (t, a) => {
+                if (isNaN(t)) {
+                    // Check if NaN is due to invalid input (a <= 0) or sin(theta) > 1
+                    if (a <= 0 || isNaN(a)) return "$$\\text{Invalid Slit}$$";
+                    return "$$\\text{> 90}\\degree \\text{ (Max Spread)}$$"; 
+                }
+                return `$$${t.toFixed(3)}\\degree$$`;
+            };
+            
+            // Generate list items dynamically
+            const resultList = angles.map(a => `
+                <li>Slit $${a.name}$: <b>${formatTheta(a.theta, a.value)}</b></li>
+            `).join('');
+
+
+            showModal(`
+                <div class="p-3 rounded-lg text-center mb-4" style="background-color: ${finalModalColor}15; border: 1px solid ${finalModalColor}40; color: ${finalModalColor};">
+                    <p class="font-bold text-lg">Wavelength: $$\\lambda = ${lambda}\\text{ nm}$$ (${color})</p>
+                </div>
+
+                <p><b>Equation Used:</b> $$\\sin\\theta = \\frac{m \\lambda}{a} \\text{ (with } m=1 \\text{ for first minimum)}$$</p>
+                <p class='mt-3'><b>Calculated Angles for First Minimum:</b></p>
+                <ul class="list-disc list-inside mt-1 ml-2 space-y-2">
+                    ${resultList}
+                </ul>
+                <div class="mt-4 p-3 rounded-lg" style="background-color: ${finalModalColor}15; border-left: 4px solid ${finalModalColor};">
+                    <p class="font-bold" style="color: ${finalModalColor};">Physical Conclusion: The light is bent the most by Slit $${maxSlit}$$ $$\\theta = ${maxTheta.toFixed(3)}\\degree$.</p>
+                </div>
+            `, finalModalColor);
+        }
+
+        /* ---------------- Problem 2 Logic (GLOBAL SCOPE) ---------------- */
+        // Formula: d * sin(theta) = m * lambda
+        function solveP2() {
+            let g_lambda_nm = parseFloat(document.getElementById("g_lambda").value);
+            let g_m = parseFloat(document.getElementById("g_m").value);
+            let g_theta_deg = parseFloat(document.getElementById("g_theta").value);
+
+            let r_lambda_nm = parseFloat(document.getElementById("r_lambda").value);
+            let r_m = parseFloat(document.getElementById("r_m").value);
+            
+            const defaultModalColor = '#2563eb'; // Default to Blue 600 for P2
+            let errorColor = '#D2042D';
+
+            // General Input Error Check
+            if (isNaN(g_lambda_nm) || isNaN(g_m) || isNaN(g_theta_deg) || isNaN(r_lambda_nm) || isNaN(r_m) || g_m === 0 || g_theta_deg <= 0 || g_theta_deg >= 90) {
+                showModal(`
+                    <div class="p-3 rounded-lg text-center mb-4" style="background-color: ${errorColor}15; border: 1px solid ${errorColor}40; color: ${errorColor};">
+                        <p class="font-bold text-lg">Input Error</p>
+                    </div>
+                    <p class='text-center mt-4 text-red-600 font-bold'>$$\\text{Please enter a valid number. The Green angle (}\\theta_g\\text{) must be between } 0\\degree \\text{ and } 90\\degree.$$</p>
+                `, errorColor);
+                return;
+            }
+            
+            // Out of Range Wavelength Check for P2
+            let g_colorDetails = getColorDetails(g_lambda_nm);
+            let r_colorDetails = getColorDetails(r_lambda_nm);
+            
+            if (g_colorDetails.name === "Out of Range" || r_colorDetails.name === "Out of Range") {
+                const rangeErrorColor = '#D2042D'; // Red Cherry
+                showModal(`
+                    <div class="p-3 rounded-lg text-center mb-4" style="background-color: ${rangeErrorColor}15; border: 1px solid ${rangeErrorColor}40; color: ${rangeErrorColor};">
+                        <p class="font-bold text-lg">Input Error</p>
+                    </div>
+                    <p class='text-center mt-4 text-gray-600 font-bold'> Out of Range. Please enter a valid number (380nm - 750nm)</p>
+                `, rangeErrorColor);
+                return;
+            }
+
+
+            // Convert to base units
+            const g_lambda = g_lambda_nm * 1e-9; // m
+            const g_theta = g_theta_deg * Math.PI / 180; // rad
+            const r_lambda = r_lambda_nm * 1e-9; // m
+
+            // 1. Calculate grating spacing 'd'
+            const d = (g_m * g_lambda) / Math.sin(g_theta);
+            const d_um = d * 1e6; // Grating spacing in µm
+
+            // 2. Calculate sin(theta_r)
+            const sin_r = (r_m * r_lambda) / d;
+
+            let resultContent = "";
+
+            if (Math.abs(sin_r) > 1) {
+                resultContent = `
+                    <div class="p-3 rounded-lg text-center mb-4" style="background-color: ${errorColor}15; border: 1px solid ${errorColor}40; color: ${errorColor};">
+                        <p class="font-bold text-lg">Impossible Result</p>
+                    </div>
+                    <p class="text-red-600 font-bold">The required angle for Red light ($$m_r=${r_m}$$, $$\\lambda_r=${r_lambda_nm}\\text{ nm}$$) is physically impossible. The calculated value for $$\\sin\\theta_r$$ is $${sin_r.toFixed(5)}$$, which exceeds 1.</p>
+                    <p class="text-sm mt-2 text-gray-700">$$\\text{Calculated Grating Spacing: } d = ${d_um.toFixed(3)}\\ \\mu\\text{m}$$</p>
+                    <p class="text-sm mt-1 text-gray-700">This often happens if the order $$m$$ is too high relative to the grating spacing $$d$$.</p>
+                    `;
+                    showModal(resultContent, errorColor);
+
+            } else {
+                // 3. Calculate theta_r
+                const r_theta_rad = Math.asin(sin_r);
+                const r_theta_deg = r_theta_rad * 180 / Math.PI;
+
+                resultContent = `
+                    <div class="p-3 rounded-lg text-center mb-4" style="background-color: ${defaultModalColor}15; border: 1px solid ${defaultModalColor}40; color: ${defaultModalColor};">
+                        <p class="font-bold text-lg">Diffraction Grating Angle Calculation</p>
+                    </div>
+                    <p><b>1. Calculate Grating Spacing dfrom Green Light:</b></p>
+                    <p class="ml-4">$$\\text{Given: } m_g=${g_m}, \\lambda_g=${g_lambda_nm}\\text{ nm}, \\theta_g=${g_theta_deg}\\degree$$</p>
+                    <p class="ml-4">$$\\rightarrow d = \\frac{m_g \\lambda_g}{\\sin(\\theta_g)} = ${(d_um).toFixed(3)}\\ \\mu\\text{m}$$</p>
+                    <hr class="my-3"/>
+                    <p><b>2. Calculate Angle for Red Light:</b></p>
+                    <p class="ml-4">$$\\text{Given: } m_r=${r_m}, \\lambda_r=${r_lambda_nm}\\text{ nm}, d=${(d_um).toFixed(3)} \\mu\\text{m}$$</p>
+                    <p class="ml-4">$$\\sin(\\theta_r) = \\frac{m_r \\lambda_r}{d} = ${sin_r.toFixed(5)}$$</p>
+                    <div class="mt-4 p-3 rounded-lg bg-blue-50 border-l-4 border-blue-500 text-blue-700">
+                        <p class="font-bold text-center">Final Angle for Red Light: $$\\theta_r = ${r_theta_deg.toFixed(3)}\\degree$$</p>
+                    </div>
+                `;
+                    showModal(resultContent, defaultModalColor);
+            }
+        }
+    </script>
+</body>
+</html>
